@@ -1,0 +1,58 @@
+{
+  "_args": [
+    [
+      "tools-fb@15.0.10",
+      "/home/runner/tools-fb"
+    ]
+  ],
+  "_from": "tools-fb@15.0.10",
+  "_id": "tools-fb@15.0.10",
+  "_inBundle": false,
+  "_integrity": "sha512-SgWtjjWb5NEb6WFMpZ7v8Sb4JCADyep7xkK8dLxGia2PikIJUnacFbg47FvVrwXiybILHrduNdh6caY7xUnsAQ==",
+  "_location": "/tools-fb",
+  "_phantomChildren": {},
+  "_requested": {
+    "type": "version",
+    "registry": true,
+    "raw": "tools-fb@15.0.10",
+    "name": "tools-fb",
+    "escapedName": "tools-fb",
+    "rawSpec": "15.0.10",
+    "saveSpec": null,
+    "fetchSpec": "15.0.10"
+  },
+  "_requiredBy": [
+    "/"
+  ],
+  "_resolved": "https://registry.npmjs.org/tools-fb/-/tools-fb-15.0.10.tgz",
+  "_spec": "15.0.10",
+  "_where": "/home/runner/tools-fb",
+  "author": {
+    "name": "NguyênDz"
+  },
+  "bugs": {
+    "url": "https://github.com/ntkhang03/fb-tools/issues"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.6",
+    "form-data": "^4.0.0",
+    "got": "^11.8.2"
+  },
+  "description": "Tải Video Và Tìm Uid Người dùng Fb",
+  "devDependencies": {},
+  "homepage": "https://github.com/ntkhang03/fb-tools#readme",
+  "keywords": [
+    "tools-fb"
+  ],
+  "license": "MIT",
+  "main": "index.js",
+  "name": "tools-fb",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ntkhang03/fb-tools.git"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "version": "15.0.10"
+}

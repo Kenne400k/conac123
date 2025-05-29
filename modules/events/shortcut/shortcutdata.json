@@ -1,0 +1,98 @@
+[
+    {
+        "threadID": "6328370547184627",
+        "shortcuts": [
+            {
+                "id": "Jtnr8CAnKY.mp4",
+                "output": "Okokok",
+                "uri": {},
+                "input_type": "tag",
+                "tag_id": "100068096370437"
+            }
+        ]
+    },
+    {
+        "threadID": "6368402966620903",
+        "shortcuts": []
+    },
+    {
+        "threadID": "7143320082372879",
+        "shortcuts": []
+    },
+    {
+        "threadID": "7254331177990167",
+        "shortcuts": [
+            {
+                "id": "zzuKromBrr.png",
+                "input": "Iaia",
+                "output": "Aooaoa"
+            },
+            {
+                "id": "8rmomoC4vp.mp4",
+                "output": "Âjab",
+                "input_type": "tag",
+                "tag_id": "100050999371837"
+            }
+        ]
+    },
+    {
+        "threadID": "7452473324788808",
+        "shortcuts": [
+            {
+                "id": "M48rKoKWrF",
+                "output": "đừng tag. Tiến Nguyễn chỉ xem và sẽ ít tương tác hơn trc và không tag khi có chuyện gấp",
+                "input_type": "tag",
+                "tag_id": "100050999371837"
+            }
+        ]
+    },
+    {
+        "threadID": "7580821378665834",
+        "shortcuts": [
+            {
+                "id": "zcz1yttWKC.mp4",
+                "output": "Tiến đẹp trai số 1 thế giới nên đừng tag",
+                "uri": "https://i.imgur.com/08l3ydX.mp4",
+                "input_type": "tag",
+                "tag_id": "100050999371837"
+            }
+        ]
+    },
+    {
+        "threadID": "100050999371837",
+        "shortcuts": [
+            {
+                "id": "Cwt9CscYck.png",
+                "output": "Hhhh",
+                "uri": {
+                    "error": "query \"url\" invalid"
+                },
+                "input_type": "tag",
+                "tag_id": "100050999371837"
+            }
+        ]
+    },
+    {
+        "threadID": "8291894074173221",
+        "shortcuts": [
+            {
+                "id": "FmCymzCwFz.png",
+                "output": "Hiii",
+                "uri": "https://i.imgur.com/XW4BPfr.jpeg",
+                "input_type": "tag",
+                "tag_id": "100050999371837"
+            }
+        ]
+    },
+    {
+        "threadID": "7434372073326734",
+        "shortcuts": [
+            {
+                "id": "orCtBoDD8c",
+                "output": "Tiến Nguyễn chỉ xem chứ không tương tác nữa vui lòng không tag khi có chuyện gấp",
+                "input_type": "tag",
+                "tag_id": "100050999371837"
+            }
+        ]
+    }
+]

@@ -1,0 +1,139 @@
+# chalkercli
+
+[![npm](https://img.shields.io/npm/v/chalkercli.svg?style=flat-square)](https://www.npmjs.com/package/chalkercli)
+[![npm](https://img.shields.io/npm/dw/chalkercli.svg?style=flat-square&colorB=fe7d37)](https://www.npmjs.com/package/chalkercli)
+
+> Colorful animations in terminal output
+
+
+## Available animations
+
+|   Name    |                   Preview                  |
+|:---------:|:------------------------------------------:|
+|  rainbow  | ![rainbow](http://i.imgur.com/napdxdn.gif) |
+|   pulse   | ![pulse](http://i.imgur.com/xdaETwr.gif)   |
+|   glitch  | ![glitch](http://i.imgur.com/834FJU1.gif)  |
+|   radar   | ![radar](http://i.imgur.com/3bFrtRc.gif)   |
+|    neon   | ![neon](http://i.imgur.com/YdAAroI.gif)    |
+|  karaoke  | ![karaoke](https://i.imgur.com/lG7EF1t.gif)|
+
+
+## Install
+
+```bash
+$ npm i chalkercli
+```
+
+
+## Usage
+
+```javascript
+const chalkAnimation = require('chalkercli');
+
+chalkAnimation.rainbow('Lorem ipsum dolor sit amet');
+```
+
+#### Start and stop
+
+You can stop and resume an animation with `stop()` and `start()`.
+
+When created, the instance of chalkAnimation **starts automatically**.
+
+```javascript
+const rainbow = chalkAnimation.rainbow('Lorem ipsum'); // Animation starts
+
+setTimeout(() => {
+    rainbow.stop(); // Animation stops
+}, 1000);
+
+setTimeout(() => {
+    rainbow.start(); // Animation resumes
+}, 2000);
+
+```
+
+#### Automatic stop
+
+Anything printed to the console will stop the previous animation automatically
+
+```javascript
+chalkAnimation.rainbow('Lorem ipsum');
+setTimeout(() => {
+    // Stop the 'Lorem ipsum' animation, then write on a new line.
+    console.log('dolor sit amet');
+}, 1000);
+```
+
+#### Changing speed
+
+Change the animation speed using a second parameter. Should be greater than 0, default is 1.
+
+```javascript
+chalkAnimation.rainbow('Lorem ipsum', 2); // Two times faster than default
+```
+
+#### Changing text
+
+Change the animated text seamlessly with `replace()`
+
+```javascript
+let str = 'Loading...';
+const rainbow = chalkAnimation.rainbow(str);
+
+// Add a new dot every second
+setInterval(() => {
+	rainbow.replace(str += '.');
+}, 1000);
+```
+
+#### Manual rendering
+
+Manually render frames with `render()`, or get the content of the next frame with `frame()`
+
+```javascript
+const rainbow = chalkAnimation.rainbow('Lorem ipsum').stop(); // Don't start the animation
+
+rainbow.render(); // Display the first frame
+
+const frame = rainbow.frame(); // Get the second frame
+console.log(frame);
+```
+
+
+## CLI mode
+
+```bash
+# Install package globally
+$ npm install --global chalkercli
+```
+
+```
+$ chalkercli --help
+
+  Colorful animations in terminal output
+
+  Usage
+    $ chalkercli <name> [options] [text...]
+
+  Options
+    --duration  Duration of the animation in ms, defaults to Infinity
+    --speed  Animation speed as number > 0, defaults to 1
+
+  Available animations
+    rainbow
+    pulse
+    glitch
+    radar
+    neon
+    karaoke
+
+  Example
+    $ chalkercli rainbow Hello world!
+```
+
+
+#
+
+## License
+
+MIT c [Ricky Rodrigo](https://github.com/veniqa)

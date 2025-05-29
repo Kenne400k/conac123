@@ -1,0 +1,169 @@
+const axios = require("axios");
+const fs = require("fs");
+const isURL = (u) => /^https?:\/\//.test(u);
+
+function extractURL(text) {
+  if (typeof text !== 'string') {
+    return null;  
+  }
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const urls = text.match(urlRegex);
+  return urls ? urls[0] : null;
+}
+
+async function fetchMediaData(url, cookies = null) {
+  try {
+    const { data } = await axios.get(`/*https://api.azig.dev/media/downAIO?apikey=apiazigdev&url=*/${url}`, {
+      headers: cookies ? { Cookie: cookies } : {}
+    });
+    if (data && data.success && data.data && data.data.medias && data.data.medias.length > 0) {
+      const mp4Media = data.data.medias.filter(media => media.type === 'video' && media.extension === 'mp4');
+      const imageMedia = data.data.medias.filter(media => media.type === 'image');
+      const audioMedia = data.data.medias.filter(media => media.type === 'audio' && media.extension === 'mp3');
+      const attachments = [];
+      const body = `🗿 Tác giả: ${data.data.author || 'N/A'}\n📝 Tiêu Đề: ${data.data.title || 'N/A'}.`;
+      if (mp4Media.length > 0) {
+        const highestQualityVideo = mp4Media.sort((a, b) => b.quality.localeCompare(a.quality))[0];
+        attachments.push(await streamURL(highestQualityVideo.url, 'mp4'));
+      }
+      if (imageMedia.length > 0) {
+        for (const img of imageMedia) {
+          attachments.push(await streamURL(img.url, 'jpg'));
+        }
+      }
+      if (audioMedia.length > 0) {
+        for (const audio of audioMedia) {
+          attachments.push(await streamURL(audio.url, 'mp3')); 
+        }
+      }
+      if (attachments.length > 0) {
+        return { body, attachment: attachments };
+      } else {
+        return null;
+      }
+    } else {
+      return null;
+    }
+
+  } catch (error) {
+    console.error("Error fetching media data:", error);
+  }
+}
+
+exports.handleEvent = async function (o) {
+  try {
+    const str = o.event.body;
+    const send = (msg) => o.api.sendMessage(msg, o.event.threadID, o.event.messageID);
+    const head = (app) => `[ ${app.toUpperCase()} ] - Download`;
+    let cookies = o.event.cookies || null;
+    const url = extractURL(str);
+
+    if (isURL(url)) {
+      let platform; 
+      if (/facebook\.com|fb\.watch/.test(url)) platform = 'FACEBOOK';
+      else if (/douyin\.com\//.test(url)) platform = 'DOUYIN';
+      else if (/threads\.net/.test(url)) platform = 'THREADS';
+      else if (/espn\.com/.test(url)) platform = 'ESPN';
+      else if (/imdb\.com/.test(url)) platform = 'IMDB';
+      else if (/imgur\.com/.test(url)) platform = 'IMGUR';
+      else if (/ifunny\.co/.test(url)) platform = 'IFUNNY';
+      else if (/izlesene\.com/.test(url)) platform = 'IZLESENE';
+      else if (/reddit\.com/.test(url)) platform = 'REDDIT';
+      else if (/x\.com/.test(url)) platform = 'TWITTER | X';
+      else if (/vimeo\.com/.test(url)) platform = 'VIMEO';
+      else if (/snapchat\.com/.test(url)) platform = 'SNAPCHAT';
+      else if (/bilibili\.com/.test(url)) platform = 'BILIBILI';
+      else if (/dailymotion\.com/.test(url)) platform = 'DAILYMOTION';
+      else if (/sharechat\.com/.test(url)) platform = 'SHARECHAT';
+      else if (/likee\.com/.test(url)) platform = 'LIKEE';
+      else if (/linkedin\.com/.test(url)) platform = 'LINKEDIN';
+      else if (/tumblr\.com/.test(url)) platform = 'TUMBLR';
+      else if (/hipi\.in/.test(url)) platform = 'HIPI';
+      else if (/telegram\.org/.test(url)) platform = 'TELEGRAM';
+      else if (/getstickerpack\.com/.test(url)) platform = 'GETSTICKERPACK';
+      else if (/bitchute\.com/.test(url)) platform = 'BITCHUTE';
+      else if (/febspot\.com/.test(url)) platform = 'FEBSPOT';
+      else if (/9gag\.com/.test(url)) platform = '9GAG';
+      else if (/oke\.ru/.test(url)) platform = 'OKE.RU';
+      else if (/rumble\.com/.test(url)) platform = 'RUMBLE';
+      else if (/streamable\.com/.test(url)) platform = 'STREAMABLE';
+      else if (/ted\.com/.test(url)) platform = 'TED';
+      else if (/sohu\.com/.test(url)) platform = 'SOHU.TV';
+      else if (/xvideos\.com/.test(url)) platform = 'XVIDEOS';
+      else if (/xnxx\.com/.test(url)) platform = 'XNX';
+      else if (/xhslink\.com/.test(url)) platform = 'XIAOHONGSHU';
+      else if (/ixigua\.com/.test(url)) platform = 'IXIGUA';
+      else if (/weibo\.com/.test(url)) platform = 'WEIBO';
+      else if (/sina\.com/.test(url)) platform = 'SINA';
+      else if (/mixcloud\.com/.test(url)) platform = 'MIXCLOUD';
+      else if (/bandcamp\.com/.test(url)) platform = 'BANDCAMP';
+      else if (/spotify\.com/.test(url)) platform = 'SPOTIFY';
+      else if (/zingmp3\.vn/.test(url)) platform = 'ZINGMP3';
+      else if (/instagram\.com/.test(url)) platform = 'INSTAGRAM';
+      else if (/kuaishou\.com/.test(url)) platform = 'KUAISHOU';
+      else if (/pinterest\.com/.test(url)) platform = 'PINTEREST';
+      else if (/miaopai\.com/.test(url)) platform = 'MIAOPAI';
+      else if (/meipai\.com/.test(url)) platform = 'MEIPAI';
+      else if (/xiaoying\.com/.test(url)) platform = 'XIAOYING';
+      else if (/nationalvideo\.com/.test(url)) platform = 'NATIONAL VIDEO';
+      else if (/yingke\.com/.test(url)) platform = 'YINGKE';
+      else if (/kwai\.com/.test(url)) platform = 'KWAI';
+      else if (/akillitv\.com/.test(url)) platform = 'AKILLI TV';
+      else if (/blogger\.com/.test(url)) platform = 'BLOGGER';
+      else if (/blutv\.com/.test(url)) platform = 'BLUTV';
+      else if (/buzzfeed\.com/.test(url)) platform = 'BUZZFEED';
+      else if (/chingari\.com/.test(url)) platform = 'CHINGARI';
+      else if (/flickr\.com/.test(url)) platform = 'FLICKR';
+      else if (/gaana\.com/.test(url)) platform = 'GAANA';
+      else if (/mxtakatak\.com/.test(url)) platform = 'MXTAKATAK';
+      else if (/periscope\.tv/.test(url)) platform = 'PERISCOPE';
+      else if (/puhutv\.com/.test(url)) platform = 'PUHUTV';
+      else if (/vk\.com/.test(url)) platform = 'VK';
+      else if (/twitch\.tv/.test(url)) platform = 'TWITCH';
+      else if (/memedroid\.com/.test(url)) platform = 'MEMEDROID';
+      else if (/vt\.tiktok\.com/.test(url)) platform = 'TIKTOK';
+
+      if (platform) {
+        const data = await fetchMediaData(url, cookies);
+        if (data) {
+          send({
+            body: `${head(platform)}\n\n${data.body}`,
+            attachment: data.attachment
+          });
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Error in handleEvent:", e);
+  }
+};
+
+exports.run = () => {};
+
+exports.config = {
+  name: 'autodow2',
+  version: '2.7.1',
+  hasPermssion: 0,
+  credits: 'Lemon x Api Azig',
+  description: '',
+  commandCategory: 'Tiện ích',
+  usages: [],
+  cooldowns: 3,
+  usePrefix: false
+};
+
+async function streamURL(url, type) {
+  try {
+    const res = await axios.get(url, { responseType: 'arraybuffer' });
+    const path = __dirname + `/cache/${Date.now()}.${type}`;
+    fs.writeFileSync(path, res.data);
+    
+    setTimeout(() => {
+      fs.unlinkSync(path);
+    }, 1000 * 60); 
+
+    return fs.createReadStream(path);
+  } catch (error) {
+    throw error;
+  }
+}

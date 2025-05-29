@@ -1,0 +1,65 @@
+{
+  "name": "caesar-salad",
+  "version": "2.1.0",
+  "description": "Caesar, Vigenere and ROT Ciphers.",
+  "license": "MIT",
+  "keywords": [
+    "Caesar",
+    "Cipher",
+    "Vigenere",
+    "ROT",
+    "ROT13",
+    "ROT18",
+    "ROT47",
+    "ROT5"
+  ],
+  "preferGlobal": false,
+  "engines": {
+    "node": ">=8.0"
+  },
+  "repository": "schnittstabil/caesar-salad-cli.git",
+  "author": {
+    "name": "Michael Mayer",
+    "email": "michael@schnittstabil.de",
+    "url": "schnittstabil.de"
+  },
+  "dependencies": {
+    "char-buffer": "^1.0.0||^2.0.0"
+  },
+  "devDependencies": {
+    "ava": "^2.4.0",
+    "coveralls": "^3.0.3",
+    "del-cli": "^3.0.0",
+    "nyc": "^14.1.1",
+    "xo": "^0.24.0",
+    "yuidocjs": "^0.10.2"
+  },
+  "xo": {
+    "ignores": [
+      "**/.nyc_output/**",
+      "**/coverage/**",
+      "**/gh-pages/**",
+      "resources/yuidoc/**",
+      "config.js",
+      "build.js"
+    ]
+  },
+  "main": "index.js",
+  "files": [
+    "caesar.js",
+    "index.js",
+    "password.js",
+    "rot13.js",
+    "rot18.js",
+    "rot47.js",
+    "rot5.js",
+    "substitution-cipher.js",
+    "vigenere.js"
+  ],
+  "scripts": {
+    "test": "xo && ava",
+    "test-cover": "xo && nyc ava",
+    "test-cover-html": "npm run test-cover && nyc report --reporter=html",
+    "docs": "del 'gh-pages/**' '!gh-pages' '!gh-pages/index.html' '!gh-pages/.git' '!gh-pages/.git/**' && yuidoc"
+  }
+}

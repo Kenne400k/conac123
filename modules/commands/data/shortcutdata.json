@@ -1,0 +1,32 @@
+[
+    {
+        "threadID": "8291830727519771",
+        "shortcuts": [
+            {
+                "input": "💋",
+                "output": "00000000",
+                "uri": "random"
+            }
+        ]
+    },
+    {
+        "threadID": "7521002927997636",
+        "shortcuts": [
+            {
+                "input": "☁️",
+                "output": "Cc",
+                "uri": "random"
+            }
+        ]
+    },
+    {
+        "threadID": "7513171775454120",
+        "shortcuts": [
+            {
+                "input": "💥",
+                "output": "Cc",
+                "uri": "random"
+            }
+        ]
+    }
+]

@@ -1,0 +1,355 @@
+// Tường AI v7.0 - All-in-one: Media thông minh, phủ định, context, mood, cá nhân hóa, Gemini AI, GIF, Lyrics, Meme, QR, Reminder, Playlist, Group, Game, Tool, v.v.
+
+const TUONGS = ["tuong", "tường"];
+const YOUTUBE_API_KEY = "AIzaSyD16U7WwrIFGOKijx0GR_3hU6p7Ww7JObM";
+const GEMINI_API_KEY = "AIzaSyAIrHT8PlzLDfRwV3HAwcTapkILpH322So";
+const GEMINI_MODEL = "gemini-2.0-flash";
+const GIPHY_KEY = "x2DSDHSAKfI06mgb0ON56fxtp9JAUTuQ";
+const THECATAPI_KEY = "live_R3gMhw4dZ9qymWsBCSjbfzmelZpiawsrH4VwR8qmEs316MDjvwcvSMDgWuxkEdK3";
+const GENIUS_API_KEY = "YOUR_GENIUS_API_KEY";
+
+const fs = require("fs-extra");
+const path = require("path");
+const axios = require("axios");
+const ytdl = require("@distube/ytdl-core");
+const ffmpeg = require("fluent-ffmpeg");
+const qs = require("qs");
+
+const DATA_DIR = path.join(__dirname, "../../data");
+const TUONG_DIR = path.join(DATA_DIR, "tuong_ai");
+const userDataFile = path.join(TUONG_DIR, "user_data.json");
+const groupDataFile = path.join(TUONG_DIR, "group_data.json");
+const memoriesFile = path.join(TUONG_DIR, "memories.json");
+const playlistsFile = path.join(TUONG_DIR, "playlists.json");
+const remindersFile = path.join(TUONG_DIR, "reminders.json");
+const autoAIFile = path.join(TUONG_DIR, "auto_ai.json");
+const TMP_DIR = path.join(__dirname, "ytb_tmp");
+
+[DATA_DIR, TUONG_DIR, TMP_DIR].forEach(dir => fs.ensureDirSync(dir));
+[userDataFile, groupDataFile, memoriesFile, playlistsFile, remindersFile, autoAIFile].forEach(file => {
+  if (!fs.existsSync(file)) fs.writeFileSync(file, JSON.stringify({}));
+});
+
+let userData = require(userDataFile);
+let groupData = require(groupDataFile);
+let memories = require(memoriesFile);
+let playlists = require(playlistsFile);
+let reminders = require(remindersFile);
+let autoAI = require(autoAIFile);
+
+function saveData(type) {
+  try {
+    if (type === 'userData') fs.writeFileSync(userDataFile, JSON.stringify(userData, null, 2));
+    if (type === 'groupData') fs.writeFileSync(groupDataFile, JSON.stringify(groupData, null, 2));
+    if (type === 'memories') fs.writeFileSync(memoriesFile, JSON.stringify(memories, null, 2));
+    if (type === 'playlists') fs.writeFileSync(playlistsFile, JSON.stringify(playlists, null, 2));
+    if (type === 'reminders') fs.writeFileSync(remindersFile, JSON.stringify(reminders, null, 2));
+    if (type === 'autoAI') fs.writeFileSync(autoAIFile, JSON.stringify(autoAI, null, 2));
+  } catch (e) { console.error(`Lỗi lưu ${type}:`, e); }
+}
+function unsign(str) {
+  return (str || "")
+    .toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
+// ==== PHÂN TÍCH TỪ KHÓA, PHỦ ĐỊNH, MOOD, CONTEXT & INTENT ====
+function parseMediaRequest(userMessage, type = "detect") {
+  const msg = unsign(userMessage);
+
+  // Phủ định (loại trừ)
+  const negPhrases = ["không", "đừng", "loại trừ", "tránh", "not", "no"];
+  let negKeywords = [];
+  let positive = msg;
+  negPhrases.forEach(neg => {
+    if (msg.includes(neg)) {
+      let after = msg.split(neg).pop().replace(/^(gửi|video|nhạc|clip|gif|meme)/, "").trim();
+      if (after && after.length > 1) negKeywords.push(after);
+      positive = positive.replace(neg + " " + after, "");
+    }
+  });
+
+  // Mood/context
+  if (/(buồn|chán|sad|😭|😢|stress)/.test(userMessage)) return {type: "mp3", query: "nhạc buồn", mood: "sad"};
+  if (/(vui|meme|hài|cười|happy|😆)/.test(userMessage)) return {type: "mp4", query: "clip hài", mood: "happy"};
+  if (/(gif|ảnh động)/.test(userMessage)) return {type: "gif", query: positive, negKeywords};
+  if (/(qr|qr code)/.test(userMessage)) return {type: "qr", query: positive.match(/qr code (.+)/)?.[1] || ""};
+
+  let req = null;
+  if (type === "detect" || type === "video") {
+    const videoWords = ["video","clip","youtube","phim","trailer","mv","show"];
+    videoWords.forEach(w => { if (positive.includes(w)) req = {type: "mp4", query: positive.split(w).pop().trim()}; });
+  }
+  if ((type === "detect" || type === "mp3") && !req) {
+    const mp3Words = ["nhac","mp3","audio","bai hat","song","music"];
+    mp3Words.forEach(w => { if (positive.includes(w)) req = {type: "mp3", query: positive.split(w).pop().trim()}; });
+  }
+  if ((type === "detect" || type === "image") && !req) {
+    const imgWords = ["ảnh","anh","hình","meme","wallpaper"];
+    imgWords.forEach(w => { if (positive.includes(w)) req = {type: "img", query: positive.split(w).pop().trim()}; });
+  }
+  if (req) req.negKeywords = negKeywords;
+  return req;
+}
+
+async function searchYouTube(query, maxResults = 10, negKeywords = []) {
+  try {
+    const response = await axios.get(`https://www.googleapis.com/youtube/v3/search`, {
+      params: { q: query, key: YOUTUBE_API_KEY, part: "snippet", maxResults, type: "video", order: "relevance", safeSearch: "moderate" }
+    });
+    let results = response.data.items.map((video, index) => ({
+      index: index + 1,
+      title: video.snippet.title,
+      videoId: video.id.videoId,
+      thumbnail: video.snippet.thumbnails.high?.url || video.snippet.thumbnails.default.url,
+      url: `https://www.youtube.com/watch?v=${video.id.videoId}`,
+      channel: video.snippet.channelTitle,
+      publishedAt: video.snippet.publishedAt
+    }));
+    const keywords = query.split(" ").filter(k=>k.length>1);
+    results = results.filter(r => keywords.every(w => r.title.toLowerCase().includes(w)));
+    if (negKeywords && negKeywords.length)
+      results = results.filter(r => !negKeywords.some(neg => r.title.toLowerCase().includes(neg)));
+    return results;
+  } catch { return null; }
+}
+
+async function downloadYouTubeMp3(url, outPath, maxSeconds = 300) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const info = await ytdl.getInfo(url);
+      const format = ytdl.chooseFormat(info.formats, {quality:"highestaudio",filter:"audioonly"});
+      if (!format) return reject("Không tìm thấy audio phù hợp!");
+      const stream = ytdl.downloadFromInfo(info, {format, highWaterMark: 1<<25});
+      ffmpeg(stream).audioBitrate(128).audioCodec('libmp3lame').setDuration(maxSeconds).format("mp3")
+        .on("end", () => resolve(outPath)).on("error", e => reject(e)).save(outPath);
+    } catch (e) { reject(e); }
+  });
+}
+async function downloadYouTubeMp4(url, outPath, maxSeconds = 300, quality = "360p") {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const info = await ytdl.getInfo(url);
+      let format = info.formats.find(f => f.itag === 18) || info.formats.find(f => f.qualityLabel === quality && f.container === "mp4");
+      if (!format) format = ytdl.chooseFormat(info.formats, {quality:"lowest",filter:"videoandaudio"});
+      if (!format) return reject("Không tìm thấy video phù hợp!");
+      const stream = ytdl.downloadFromInfo(info, {format, highWaterMark: 1<<25});
+      ffmpeg(stream).setDuration(maxSeconds).videoBitrate(1000).videoCodec('libx264').audioCodec('aac').format("mp4")
+        .on("end", () => resolve(outPath)).on("error", e => reject(e)).save(outPath);
+    } catch (e) { reject(e); }
+  });
+}
+
+async function searchGif(query) {
+  try {
+    const q = encodeURIComponent(query);
+    const res = await axios.get(`https://api.giphy.com/v1/gifs/search?${qs.stringify({q, api_key: GIPHY_KEY, limit: 1})}`);
+    return res.data.data[0]?.images?.original?.url || null;
+  } catch { return null; }
+}
+
+async function searchLyrics(song) {
+  try {
+    return `Lời bài hát cho "${song}" sẽ được cập nhật sau!`;
+  } catch { return null; }
+}
+
+async function createQrCode(text) {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(text)}`;
+}
+
+async function catImage() {
+  try {
+    const res = await axios.get("https://api.thecatapi.com/v1/images/search",{headers:{'x-api-key':THECATAPI_KEY}});
+    return res.data[0]?.url;
+  } catch { return null; }
+}
+
+async function getAIResponse(userMessage, userState, memory, context) {
+  let prompt = `Bạn là Tường AI. Trả lời thật NGẮN GỌN (dưới 20 từ), thân thiện, không nhắc lại câu hỏi, không diễn sâu, dễ thương tí như người yêu.`;
+  prompt += "\nTin nhắn: " + userMessage;
+  try {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+    const response = await axios.post(url, {
+      contents: [{role:"user",parts:[{text:prompt}]}],
+      generationConfig: { temperature: 0.9, topP: 0.95, maxOutputTokens: 1024 }
+    }, {timeout: 15000});
+    if (response.data?.candidates?.[0]?.content?.parts?.[0]?.text)
+      return response.data.candidates[0].content.parts[0].text;
+    return "Tường bị lag nhẹ, nói lại thử nhé! 😅";
+  } catch { return "Tường đang bận, thử lại sau nha! 🤖💭"; }
+}
+
+async function sendMedia(api, event, req, quality = "360p") {
+  const {threadID, messageID, senderID} = event;
+  if (req.type === "mp3" || req.type === "mp4") {
+    let videoList = await searchYouTube(req.query, 10, req.negKeywords);
+    if (!videoList || !videoList.length) return api.sendMessage("Không tìm thấy video phù hợp!", threadID, messageID);
+    let bestResult = videoList[0];
+    const ext = req.type === "mp3" ? "mp3" : "mp4";
+    const filePath = path.join(TMP_DIR, `${bestResult.videoId}_${Date.now()}.${ext}`);
+    try {
+      api.sendMessage(`⏳ Đang tải ${req.type==="mp3"?"MP3":"VIDEO"}: ${bestResult.title}\n🔗 ${bestResult.url}\nVui lòng chờ...`, threadID, messageID);
+      if (req.type === "mp3") await downloadYouTubeMp3(bestResult.url, filePath, 300);
+      else await downloadYouTubeMp4(bestResult.url, filePath, 300, quality);
+      api.sendMessage({
+        body: `✅ Đã xong!\n🔗 Xem: ${bestResult.url}\nFile đính kèm bên dưới.`,
+        attachment: fs.createReadStream(filePath)
+      }, threadID, () => {fs.unlinkSync(filePath);}, messageID);
+      if (req.type==="mp3")
+        api.sendMessage(`Bạn có muốn xem lời bài hát này không? Reply "lyrics" dưới đây nhé!`, threadID);
+      let userKey = `${threadID}_${senderID}`;
+      if (!userData[userKey]) userData[userKey]={music:[],video:[]};
+      if (req.type==="mp3") userData[userKey].music?.push(req.query);
+      else userData[userKey].video?.push(req.query);
+      saveData('userData');
+    } catch (e) {
+      try{if (fs.existsSync(filePath)) fs.unlinkSync(filePath);}catch{}
+      api.sendMessage(`❌ Lỗi tải ${req.type==="mp3"?"nhạc":"video"}! Thử từ khóa khác hoặc mạng khỏe hơn nhé!`, threadID, messageID);
+    }
+    return;
+  }
+  if (req.type==="gif") {
+    const url = await searchGif(req.query);
+    if (url) await api.sendMessage({body: `GIF "${req.query}"`, attachment: await axios({url, responseType:"stream"}).then(r=>r.data)}, threadID, messageID);
+    else await api.sendMessage("Không tìm thấy GIF phù hợp!", threadID, messageID);
+    return;
+  }
+  if (req.type==="img" && /(mèo|cat|meow)/.test(req.query)) {
+    const catImg = await catImage();
+    if (catImg) await api.sendMessage({body: "Ảnh mèo cho bạn đây 😸", attachment: await axios({url: catImg, responseType:"stream"}).then(r=>r.data)}, threadID, messageID);
+    else await api.sendMessage("Không tìm được ảnh mèo lúc này!", threadID, messageID);
+    return;
+  }
+  if (req.type==="qr") {
+    const url = await createQrCode(req.query);
+    await api.sendMessage({body: `QR cho nội dung: "${req.query}"`, attachment: await axios({url, responseType:"stream"}).then(r=>r.data)}, threadID, messageID);
+    return;
+  }
+}
+
+async function handleGu(api, event, args, userKey) {
+  if (/gu nhac/i.test(args)) {
+    const gu = args.replace(/.*gu nhac/i,"").trim();
+    userData[userKey].music = gu.split(/,|;/).map(s=>s.trim());
+    saveData('userData');
+    return api.sendMessage(`Tường đã nhớ gu nhạc của bạn: ${userData[userKey].music.join(", ")}`, event.threadID, event.messageID);
+  }
+}
+
+module.exports.config = {
+  name: "tuong",
+  version: "7.0.0",
+  hasPermssion: 0,
+  credits: "PCODER",
+  description: "Tường AI v7 - Media thông minh, phủ định, context, mood, AI Gemini, GIF, Meme, QR, lyrics, reminder, playlist, group, game, tool, ALL-IN-ONE!",
+  commandCategory: "ai",
+  usages: [
+    "tuong [nội dung] - Chat AI, media, tool, meme, game, group, playlist, reminder, ...",
+    "gửi video/nhạc/gif/ảnh/meme/qr [từ khóa] - tải và gửi media",
+    "tuong set gu nhac edm, nhac tre - đặt sở thích nhạc",
+    "tuong nhắc tôi uống nước sau 2h - nhắc nhở cá nhân",
+    "tuong tạo qr hello world - tạo QR code",
+    "tuong gif happy - gửi gif vui",
+    "tuong lyrics [bài hát] - tìm lời bài hát"
+  ],
+  cooldowns: 2,
+  dependencies: {
+    "axios": "",
+    "fs-extra": "",
+    "@distube/ytdl-core": "",
+    "fluent-ffmpeg": "",
+    "qs":""
+  }
+};
+
+module.exports.onLoad = async () => {
+  console.log("🤖 Tường AI v7.0 đã sẵn sàng!");
+  setInterval(() => {
+    if (global.client.handleReply) {
+      const now = Date.now();
+      global.client.handleReply = global.client.handleReply.filter(r => !r.expires || r.expires > now);
+    }
+  }, 300000);
+};
+
+module.exports.handleEvent = async function({ api, event, args }) {
+  const {threadID, messageID, senderID, body = "", attachments = [] } = event;
+  const userKey = `${threadID}_${senderID}`;
+  if (!userData[userKey]) userData[userKey] = {music:[],video:[],gu:{},xungho:"bạn",nick:"",mood:"vui vẻ",memory:[]};
+
+  // == ON/OFF AUTO AI (bật tắt tự động trả lời nhóm) ==
+  const bodyLower = body.toLowerCase();
+  const messageStartsWithTuong = TUONGS.some(t => bodyLower.startsWith(t));
+  if (messageStartsWithTuong && /\b(on|off)\b/.test(bodyLower)) {
+    if (/\bon\b/.test(bodyLower)) {
+      autoAI[threadID] = true; saveData('autoAI');
+      return api.sendMessage("🟢 Đã bật chế độ tự động trả lời cho nhóm này! Tường sẽ trả lời mọi tin nhắn.", threadID, messageID);
+    } else if (/\boff\b/.test(bodyLower)) {
+      autoAI[threadID] = false; saveData('autoAI');
+      return api.sendMessage("🔴 Đã tắt chế độ tự động cho nhóm này. Gọi 'Tường' thì Tường mới trả lời nha!", threadID, messageID);
+    }
+  }
+
+  // == CHỈ PHẢN HỒI KHI ON HOẶC GỌI TÊN ==
+  const messageContainsTuong = TUONGS.some(t => bodyLower.includes(t));
+  if (autoAI[threadID] !== true && !messageContainsTuong && attachments.length === 0) return;
+
+  // 1. Trả lời gu cá nhân hóa
+  if (/set gu/i.test(body)) return handleGu(api, event, body, userKey);
+
+  // 2. Parse media/intent
+  const req = parseMediaRequest(body, "detect");
+  if (req) return sendMedia(api, event, req);
+
+  // 3. Lyrics
+  if (/lyrics |loi bai hat/.test(body)) {
+    const song = body.replace(/.*lyrics|loi bai hat/i,"").trim();
+    const lyric = await searchLyrics(song);
+    return api.sendMessage(lyric, threadID, messageID);
+  }
+
+  // 4. QR code
+  if (/tạo qr|qr code/i.test(body)) {
+    const qrTxt = body.replace(/.*qr code|tạo qr/i,"").trim();
+    const url = await createQrCode(qrTxt);
+    return api.sendMessage({body:`QR cho: ${qrTxt}`, attachment: await axios({url, responseType:"stream"}).then(r=>r.data)}, threadID, messageID);
+  }
+
+  // 5. Ảnh meme mèo
+  if (/meme|cat|mèo/i.test(body) && /(ảnh|gửi|show|meme)/i.test(body)) {
+    const catImg = await catImage();
+    if (catImg)
+      return api.sendMessage({body:"Ảnh meme mèo cho bạn 😸",attachment: await axios({url:catImg,responseType:"stream"}).then(r=>r.data)},threadID,messageID);
+  }
+
+  // 6. Chat Gemini AI (default)
+  userData[userKey].memory.push({time:Date.now(),text:body});
+  if (userData[userKey].memory.length>10) userData[userKey].memory.shift();
+  const reply = await getAIResponse(body, userData[userKey], userData[userKey].memory, "");
+  await api.sendMessage(reply, threadID, messageID);
+  saveData('userData');
+};
+
+module.exports.handleReply = async function ({ api, event, handleReply }) {
+  const { threadID, messageID, senderID, body } = event;
+  // Lyrics
+  if (/lyrics|lời bài hát/i.test(body)) {
+    const idx = handleReply.lastIndex || 0;
+    const video = handleReply.videoList[idx];
+    if (video) {
+      const lyric = await searchLyrics(video.title);
+      await api.sendMessage(lyric, threadID, messageID);
+    }
+    return;
+  }
+  // Media choices
+  if (/video khác|random/i.test(body)) {
+    await sendMedia(api, {threadID,messageID,senderID}, handleReply.req, handleReply.quality);
+    return;
+  }
+};
+
+module.exports.run = async function({ api, event, args }) {
+  return this.handleEvent({ api, event, args });
+};

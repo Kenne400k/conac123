@@ -1,0 +1,22 @@
+{
+  "29698321196480066": {
+    "owner": "100047128875560",
+    "ownerName": "Nguyễn Phát",
+    "status": "waiting",
+    "players": {
+      "100047128875560": {
+        "name": "Nguyễn Phát"
+      }
+    },
+    "round": 1,
+    "bets": {
+      "100047128875560": {
+        "select": "tài",
+        "amount": 10000000
+      }
+    },
+    "history": [],
+    "ban": [],
+    "fast": false
+  }
+}
